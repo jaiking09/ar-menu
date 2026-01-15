@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Restaurant Menu</title>
+    
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+
+    <style>
+        /* Basic Reset */
+        body { margin: 0; padding: 0; font-family: 'Helvetica', sans-serif; background-color: #f0f0f0; }
+
+        /* The Container handles the full screen experience */
+        #ar-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* The 3D Viewer takes up full space */
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            background-color: #222; /* Dark background for contrast */
+            --poster-color: #222;
+        }
+
+        /* The User Interface Overlay */
+        .ui-overlay {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100; /* Ensures it sits ON TOP of the camera */
+        }
+
+        .item-info h2 { margin: 0; font-size: 1.2rem; color: #333; }
+        .item-info p { margin: 5px 0 0; font-size: 0.9rem; color: #666; }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        
+        button:active { background: #0056b3; }
+
+        /* Hide the AR button customization (optional) */
+        #ar-button {
+            background-color: white;
+            border-radius: 4px;
+            border: none;
+            position: absolute;
+            top: 16px;
+            right: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ar-container">
+        <model-viewer 
+            id="menu-viewer"
+            src="" 
+            ios-src=""
+            alt="A 3D model of a food item"
+            ar
+            ar-modes="scene-viewer webxr quick-look" 
+            camera-controls 
+            auto-rotate
+            shadow-intensity="1"
+            environment-image="neutral" 
+            poster="assets/loading_spinner.png">
+            
+            <button slot="ar-button" id="ar-button">
+                👋 View in your space
+            </button>
+        </model-viewer>
+
+        <div class="ui-overlay">
+            <div class="item-info">
+                <h2 id="dish-name">Loading Menu...</h2>
+                <p id="dish-desc">Scan the floor to place item.</p>
+            </div>
+            <div class="controls">
+                <button onclick="changeItem(-1)">❮ Prev</button>
+                <button onclick="changeItem(1)">Next ❯</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 4. The Menu Data 
+        // REPLACE these filenames with your actual .glb and .usdz files in the assets folder
+  
+    const menuItems = [
+        {
+            name: "Classic Burger",
+            desc: "Juicy beef burger with all the fixings.",
+            model: "assets/burger.glb",
+            ios: "assets/burger.usdz" // See note below about this!
+        },
+        {
+            name: "Pepperoni Pizza",
+            desc: "Hot fresh pepperoni pizza.",
+            model: "assets/pizza.glb",
+            ios: "assets/pizza.usdz" // See note below about this!
+        }
+    ];
+
+        let currentIndex = 0;
+        const viewer = document.querySelector('#menu-viewer');
+        const nameEl = document.querySelector('#dish-name');
+        const descEl = document.querySelector('#dish-desc');
+
+        // Function to update the 3D model
+        function updateMenu() {
+            const item = menuItems[currentIndex];
+            
+            // Update Text
+            nameEl.textContent = item.name;
+            descEl.textContent = item.desc;
+
+            // Update 3D Source
+            viewer.src = item.model;
+            viewer.setAttribute('ios-src', item.ios);
+        }
+
+        // Function to handle Next/Prev buttons
+        window.changeItem = (direction) => {
+            currentIndex += direction;
+            
+            // Loop logic (if at end, go to start, and vice versa)
+            if (currentIndex < 0) currentIndex = menuItems.length - 1;
+            if (currentIndex >= menuItems.length) currentIndex = 0;
+
+            updateMenu();
+        };
+
+        // 5. Swipe Detection Logic
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const container = document.getElementById('ar-container');
+
+        container.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        container.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            const threshold = 50; // Minimum distance for a swipe
+            if (touchEndX < touchStartX - threshold) {
+                changeItem(1); // Swipe Left -> Next Item
+            }
+            if (touchEndX > touchStartX + threshold) {
+                changeItem(-1); // Swipe Right -> Prev Item
+            }
+        }
+
+        // Initialize the first item on load
+        updateMenu();
+
+    </script>
+</body>
+</html>
